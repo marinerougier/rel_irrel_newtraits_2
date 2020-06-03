@@ -1,0 +1,437 @@
+<!-- 
+DESCRIPTION ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+-->
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>exp</title>
+  <script src="jspsych-6.0.3/jspsych.js"></script>
+  <script src="jspsych-6.0.3/plugins/jspsych-fullscreen.js"></script>
+  <script src="jspsych-6.0.3/plugins/jspsych-html-keyboard-response.js"></script>
+  <script src="jspsych-6.0.3/plugins/jspsych-html-slider-response.js"></script>
+  <script src="jspsych-6.0.3/plugins/jspsych-html-button-response.js"></script>
+  <script src="jspsych-6.0.3/plugins/jspsych-survey-text.js"></script>
+  <script src="jspsych-6.0.3/plugins/jspsych-survey-multi-choice.js"></script>
+  <script src="js/jspsych-html-slider-response_required.js"></script>
+  <script src="js/jquery.min.js"></script>
+  <script src="js/lodash.min.js"></script>
+  <script src="js/firebase.js"></script>
+  <link href="jspsych-6.0.3/css/jspsych.css" rel="stylesheet" type="text/css">
+  <style>
+  body {
+    cursor: default;
+  }
+  #jspsych-html-slider-response-next {
+    margin: 0px;
+  }
+  .imgJudge {
+    width: 300px;
+    margin: 0px;
+    padding: 0px;
+  }
+  .jspsych-content-wrapper {
+    width: 700px;
+    height: 550px;
+  }
+</style>
+</head>
+<body></body>
+<script>
+  /* Parameters */
+  var n = 4; // number of CIs randomly sample for each cell
+  var preview_time = 2000;
+  var githubCIs = 'stimuli/'; // github CIs path
+
+  /* Initial variables */
+  var timeline = [];
+  var preloadimages = [];
+  var prolificID = jsPsych.data.getURLVariable("prolificID"); // Need to add ?prolificID={{%PROLIFIC_PID%}} at the end of the prolific survey link!
+
+  /* Functions */
+  function flatten(arr) {
+    return arr.reduce(function (flat, toFlatten) {
+      return flat.concat(Array.isArray(toFlatten) ? flatten(toFlatten) : toFlatten);
+    }, []);
+  };
+
+  // CIs
+var imgLink = [
+  "Expe1_App_gp1.jpeg", 
+  "Expe1_Av_gp1.jpeg", 
+  "Expe1_App_gp2.jpeg", 
+  "Expe1_Av_gp2.jpeg"
+  //"Expe3A_App.jpeg", 
+  //"Expe3A_Av.jpeg", 
+  //"Expe4_App.jpeg", 
+  //"Expe4_Av.jpeg", 
+  //"Expe5_App.jpeg", 
+  //"Expe5_Av.jpeg"
+];
+
+  // Add relative path to CIs
+  imgLink = imgLink.map(function(e) {return githubCIs + e});
+
+  // CIs stims
+  CIsStims = imgLink.map(function(e) {return {imgHtml: "<img class='imgJudge' src='" + e + "'>"}});
+
+  // Randomly sample n CIs
+  var sampledCIsStims = _.sampleSize(CIsStims, n);
+
+  // Preload images
+  preloadimages.push(imgLink);
+  preloadimages = flatten(preloadimages);
+
+
+  // EXPERIMENT --------------------------------------------------------------------------------------------------------
+
+  /* FULL SCREEN MODE */
+  var activeFullscreen = {
+    message: "",
+    button_label: "Cliquez ici pour passer au mode plein écran",
+    type: 'fullscreen',
+    fullscreen_mode: true,
+    delay_after: 200,
+  };
+
+/*
+  // CONSENT
+  var consent = {
+    type: 'html-button-response',
+    stimulus: function() {
+        html = "";
+        html += "<h1>Informed Consent</h1>";
+        html += "<p class='justify'>First, thank you for participating in this study! ";
+        html += "In this study, your task is to rate faces on several traits. ";
+        html += "This should take you approximately <strong>7 minutes</strong>. During this period, ";
+        html += "it is important that you remain fully <strong>concentrated</strong>.</p>";
+        html += "<p class='justify'>Your participation is voluntary, does not imply any risks, your answers will be ";
+        html += "anonymous, and you are free to withdraw from the study at any moment. After full completion, ";
+        html += "you will receive a <strong>monetary compensation</strong> as stated in the Prolific ";
+        html += "description of this experiment.</p>";
+        html += "<p class='justify'>This study is administrated by Marine Rougier, reasearcher at the UCLouvain (Belgium). ";
+        html += "If you have any question or comment please contact me at <strong>marine.rougier@uclouvain.be</strong></p>";
+        return html;
+    },
+    choices: ["I agree to take part in this study"],
+  };
+  */
+
+  /* PREVIEW CIS INSTRUCTIONS */
+  var previewCIinst = {
+    type: "html-keyboard-response",
+    post_trial_gap: 300,
+    choices: [32],
+    stimulus: function() {
+      var html = "";
+      html += "<h1>Evaluation de visages</h1>";
+      html += "<p class='justify'>Votre tâche sera d'évaluer 4 visages à travers 40 traits de personnalité (chaque trait pris séparément). ";
+      html += "Plus spécifiquement, vous devrez indiquer dans quelle mesure chaque trait semble ";
+      html += "<b>adorable, affectueux, artiste, autoritaire, bricoleur, cassant, comique, compatissant, compréhensif, décidé, déprimant, ";
+      html += "déterminé, effrayé, faible, fainéant, ferme, fidèle, froid, futé, gaspilleur, grossier, hospitalier, impuissant, indifférent, ";
+      html += "insistant, médiocre, mélancolique, méticuleux, malpoli, pénible, paresseux, peureux, poli, riche, rustre, solide, ";
+      html += "sportif, talentueux, tendre,</b> et <b>troublé</b> </br>."; 
+      html += "Comme vous le verrez, ces visages ont été <b>floutés</b> afin de rendre la tâche moins évidente. </br></br>";
+      html += "Avant cette tâche d'évaluation, <b>nous allons brièvement vous montrer les visages</b> ";
+      html += "afin que vous puissiez évaluer au mieux les similitudes et les différences entre eux. </br>";
+      html += "Chaque visage s'affichera automatiquement à l'écran durant 2 secondes. Merci de rester pleinement concentré.e.</br></br>";
+      html += "<p></br>Appuyez sur <span class='light-keys'><kbd>espace</kbd></span> pour commencer</p>";
+      return html;
+    },
+  };
+
+  /* PREVIEW CIS */
+  var previewCI = {
+    timeline_variables: CIsStims,
+    choices: jsPsych.NO_KEYS,
+    trial_duration: preview_time,
+    post_trial_gap: 100,
+    timeline: [{
+      type: 'html-keyboard-response',
+      stimulus: function() {return jsPsych.timelineVariable('imgHtml', true)},
+    }]
+  };
+
+  /* JUDGMENTS */
+  var genJudgmentTask = function(trait, sliderLables) {
+    // trait: string to be used as a variable in the data
+    // sliderLabels: array of strings to be used as labels
+    var jugmentInst = {
+      type: "html-keyboard-response",
+      post_trial_gap: 300,
+      choices: [32],
+      stimulus: function() {
+        var html = "";
+        html += "<h1>Evaluation de visages</h1>";
+        html += "<p class='justify'>Veuillez maintenant évaluer dans quelle mesure chaque visage (4 visages au total) "
+        html += "semble <b><u>" + trait + "</b></u> ";
+        html += "de 0 (pas du tout " + trait + ") à 100 (totalement " + trait + ").</br></br>";
+        html += "Notez qu'il est extrêmement important de répondre <b>aussi honnêtement et spontanément que possible.</b> "
+        html += "La première réponse qui vient à l'esprit est généralement la meilleure.</br></br>";
+        html += "<p></br>Appuyez sur <span class='light-keys'><kbd>espace</kbd></span> pour commencer</p>";
+        return html;
+      },
+    };
+
+    var judgments = [];
+    sampledCIsStims = _.shuffle(sampledCIsStims); // randomize trial order
+    sampledCIsStims.map(function(stims){ // use map instead of timeline_variable to be able to use loop_function on each trial
+      var judgmentTrial = {
+        timeline: [{
+          type: 'html-slider-response',
+          stimulus: stims.imgHtml,
+          labels: sliderLables,//['0</br>Pas du tout criminel', '100</br>Très criminel'],
+          start: 50,
+          button_label: 'Continuer',
+        }],
+        data: {trait: trait},
+        on_load: function() {
+          $("#jspsych-html-slider-response-wrapper").css("margin", "50px"); // avoids pushing continue button too far down
+          $("#jspsych-html-slider-response-wrapper").css("line-height", 1); // slider labels
+        },
+        on_finish: function(data) {
+          console.log(data.stimulus);
+          console.log(data.response);
+          console.log(data.answered);
+        },
+        loop_function: function(data){ 
+          var answered = data.values()[0].answered;
+          console.log(answered);
+          if(!answered){
+            alert("Vous devez répondre à la question pour pouvoir continuer (si vous souhaitez répondre '50', il vous suffit de cliquer sur le curseur sans le déplacer pour que votre réponse s'enregistre)"); 
+            return true; 
+          } 
+        }
+      };
+      judgments.push(judgmentTrial);
+    });
+    return [jugmentInst, judgments];
+  };
+
+  var labelsadorable        = ['0</br>Pas du tout adorable', '100</br>Totalement adorable'];
+  var labelsaffectueux     = ['0</br>Pas du tout affectueux', '100</br>Totalement affectueux'];
+  var labelsartiste       = ['0</br>Pas du tout artiste', '100</br>Totalement artiste'];
+  var labelsautoritaire         = ['0</br>Pas du tout autoritaire', '100</br>Totalement autoritaire'];
+  var labelsbricoleur        = ['0</br>Pas du tout bricoleur', '100</br>Totalement bricoleur'];
+  var labelscassant        = ['0</br>Pas du tout cassant', '100</br>Totalement cassant'];
+  var labelscomique          = ['0</br>Pas du tout comique', '100</br>Totalement comique'];
+  var labelscompatissant        = ['0</br>Pas du tout compatissant', '100</br>Totalement compatissant'];
+  var labelscompréhensif      = ['0</br>Pas du tout compréhensif', '100</br>Totalement compréhensif'];
+  var labelsdécidé            = ['0</br>Pas du tout décidé', '100</br>Totalement décidé'];
+  var labelsdéprimant        = ['0</br>Pas du tout déprimant', '100</br>Totalement déprimant'];
+  var labelsdéterminé    = ['0</br>Pas du tout déterminé', '100</br>Totalement déterminé'];
+  var labelseffrayé      = ['0</br>Pas du tout effrayé', '100</br>Totalement effrayé'];
+  var labelsfaible      = ['0</br>Pas du tout faible', '100</br>Totalement faible'];
+  var labelsfainéant      = ['0</br>Pas du tout fainéant', '100</br>Totalement fainéant'];
+  var labelsferme       = ['0</br>Pas du tout ferme', '100</br>Totalement ferme'];
+  var labelsfidèle     = ['0</br>Pas du tout fidèle', '100</br>Totalement fidèle'];
+  var labelsfroid      = ['0</br>Pas du tout froid', '100</br>Totalement froid'];
+  var labelsfuté      = ['0</br>Pas du tout futé', '100</br>Totalement futé'];
+  var labelsgaspilleur           = ['0</br>Pas du tout gaspilleur', '100</br>Totalement gaspilleur'];
+  var labelsgrossier      = ['0</br>Pas du tout grossier', '100</br>Totalement grossier'];
+  var labelshospitalier     = ['0</br>Pas du tout hospitalier', '100</br>Totalement hospitalier'];
+  var labelsimpuissant         = ['0</br>Pas du tout impuissant', '100</br>Totalement impuissant'];
+  var labelsindifférent           = ['0</br>Pas du tout indifférent', '100</br>Totalement indifférent'];
+  var labelsinsistant      = ['0</br>Pas du tout insistant', '100</br>Totalement insistant'];
+  var labelsmédiocre        = ['0</br>Pas du tout médiocre', '100</br>Totalement médiocre'];
+  var labelsmélancolique    = ['0</br>Pas du tout mélancolique', '100</br>Totalement mélancolique'];
+  var labelsméticuleux      = ['0</br>Pas du tout méticuleux', '100</br>Totalement méticuleux'];
+  var labelsmalpoli        = ['0</br>Pas du tout malpoli', '100</br>Totalement malpoli'];
+  var labelspénible       = ['0</br>Pas du tout pénible', '100</br>Totalement pénible'];
+  var labelsparesseux  = ['0</br>Pas du tout paresseux', '100</br>Totalement paresseux'];
+  var labelspeureux     = ['0</br>Pas du tout peureux', '100</br>Totalement peureux'];
+  var labelspoli      = ['0</br>Pas du tout poli', '100</br>Totalement poli'];
+  var labelsriche          = ['0</br>Pas du tout riche', '100</br>Totalement riche'];
+  var labelsrustre      = ['0</br>Pas du tout rustre', '100</br>Totalement rustre'];
+  var labelssolide        = ['0</br>Pas du tout solide', '100</br>Totalement solide'];
+  var labelssportif     = ['0</br>Pas du tout sportif', '100</br>Totalement sportif'];
+  var labelstalentueux        = ['0</br>Pas du tout talentueux', '100</br>Totalement talentueux'];
+  var labelstendre            = ['0</br>Pas du tout tendre', '100</br>Totalement tendre'];
+  var labelstroublé        = ['0</br>Pas du tout troublé', '100</br>Totalement troublé'];
+
+
+
+  var adorable     = genJudgmentTask('adorable',       labelsadorable);
+  var affectueux     = genJudgmentTask('affectueux',       labelsaffectueux);
+  var artiste    = genJudgmentTask('artiste',       labelsartiste);
+  var autoritaire     = genJudgmentTask('autoritaire',       labelsautoritaire);  
+  var bricoleur      = genJudgmentTask('bricoleur',       labelsbricoleur);
+  var cassant   = genJudgmentTask('cassant',       labelscassant);
+  var comique      = genJudgmentTask('comique',       labelscomique);
+  var compatissant     = genJudgmentTask('compatissant',       labelscompatissant);
+  var compréhensif      = genJudgmentTask('compréhensif',       labelscompréhensif);
+  var décidé       = genJudgmentTask('décidé',       labelsdécidé);
+  var déprimant        = genJudgmentTask('déprimant',       labelsdéprimant);
+  var déterminé      = genJudgmentTask('déterminé',       labelsdéterminé);
+  var effrayé = genJudgmentTask('effrayé',       labelseffrayé);
+  var faible    = genJudgmentTask('faible',       labelsfaible);
+  var fainéant      = genJudgmentTask('fainéant',       labelsfainéant);
+  var ferme    = genJudgmentTask('ferme',       labelsferme);
+  var fidèle       = genJudgmentTask('fidèle',       labelsfidèle);
+  var froid    = genJudgmentTask('froid',       labelsfroid);
+  var futé   = genJudgmentTask('futé',       labelsfuté);
+  var gaspilleur      = genJudgmentTask('gaspilleur',       labelsgaspilleur);
+  var grossier        = genJudgmentTask('grossier',       labelsgrossier);
+  var hospitalier  = genJudgmentTask('hospitalier',       labelshospitalier);
+  var impuissant   = genJudgmentTask('impuissant',       labelsimpuissant);
+  var indifférent      = genJudgmentTask('indifférent',       labelsindifférent);
+  var insistant      = genJudgmentTask('insistant',       labelsinsistant);
+  var médiocre  = genJudgmentTask('médiocre',       labelsmédiocre);
+  var mélancolique   = genJudgmentTask('mélancolique',       labelsmélancolique);
+  var méticuleux     = genJudgmentTask('méticuleux',       labelsméticuleux);
+  var malpoli    = genJudgmentTask('malpoli',       labelsmalpoli);
+  var pénible    = genJudgmentTask('pénible',       labelspénible);
+  var paresseux       = genJudgmentTask('paresseux',       labelsparesseux);
+  var peureux    = genJudgmentTask('peureux',       labelspeureux);
+  var poli      = genJudgmentTask('poli',       labelspoli);
+  var riche      = genJudgmentTask('riche',       labelsriche);
+  var rustre  = genJudgmentTask('rustre',       labelsrustre);
+  var solide  = genJudgmentTask('solide',       labelssolide);
+  var sportif     = genJudgmentTask('sportif',       labelssportif);
+  var talentueux     = genJudgmentTask('talentueux',       labelstalentueux);
+  var tendre  = genJudgmentTask('tendre',       labelstendre);
+  var troublé    = genJudgmentTask('troublé',       labelstroublé);
+
+  // Randomize judgments trait order
+  var traitsOrder = _.sampleSize(['adorable', 'affectueux', 'artiste', 'autoritaire', 'bricoleur', 'cassant', 'comique', 'compatissant', 'compréhensif', 'décidé', 'déprimant','déterminé', 'effrayé', 'faible', 'fainéant', 'ferme', 'fidèle', 'froid', 'futé', 'gaspilleur', 'grossier', 'hospitalier', 'impuissant', 'indifférent','insistant', 'médiocre', 'mélancolique', 'méticuleux', 'malpoli', 'pénible', 'paresseux', 'peureux', 'poli', 'riche', 'rustre', 'solide', 'sportif', 'talentueux', 'tendre', 'troublé'], 40);
+  console.log(traitsOrder);
+
+  /* AGE */
+  var age = {
+      timeline: [{
+        type: 'survey-text',
+        questions: [{prompt: "Quel âge avez-vous ?", rows: 1, columns: 10}],
+        button_label: "Continuer",
+      }],
+      loop_function: function(data){ 
+        var age = data.values()[0].responses;
+        var age = JSON.parse(age).Q0; 
+        if(age == ""){
+          alert("Merci d'indiquer votre âge !"); 
+          return true; 
+        }
+      },
+      on_finish: function(data) {
+          jsPsych.data.addProperties({
+              age: JSON.parse(data.responses)["Q0"],
+          });
+      },
+  };
+
+  var gender = {
+      type: 'survey-multi-choice',
+      questions: [{prompt: "Merci d'indiquer votre genre :", options: ['Homme', 'Femme', 'Autre'], required: true}],
+      button_label: "Continuer",
+      on_finish: function(data) {
+          jsPsych.data.addProperties({
+              gender: JSON.parse(data.responses)["Q0"],
+          });
+      },
+  };
+
+    var languageOptions = ['Langue maternelle', 'Très bien', 'Bien', 'Moyennement', 'Mal', 'Très mal'];
+    var language = {
+        type: 'survey-multi-choice',
+        questions: [{ prompt: "Dans quelle mesure parlez-vous bien le français ?", options: languageOptions, required: true }],
+        button_label: "Continuer",
+        on_finish: function (data) {
+            jsPsych.data.addProperties({
+                language: JSON.parse(data.responses).Q0,
+            });
+            console.log(data);
+        },
+    };
+
+    var Prolific_reported = {
+        timeline: [{
+            type: 'survey-text',
+            questions: [{ prompt: 'Veuillez indiquer votre identifiant Prolific :', rows: 3, columns: 60 }],
+            button_label: "Continuer",
+        }],
+        loop_function: function (data) {
+            var res = data.values()[0].responses;
+            var res = JSON.parse(res).Q0;
+            if (res == "") {
+                alert("Veuillez répondre à la question !");
+                return true;
+            }
+        },
+        on_finish: function (data) {
+            jsPsych.data.addProperties({
+                Prolific_reported: JSON.parse(data.responses).Q0,
+            });
+        },
+    };
+
+  /* EXIT FULLSCREEN MODE */
+  var exitFullscreen = {
+    type: 'fullscreen',
+    fullscreen_mode: false
+  };
+
+  /* DEBRIEF */
+  var debrief = [];
+  debrief += "<h1>Fin de l'expérience</h1>";
+  debrief += "<p class='justify'>Merci pour votre participation !</br>";
+  debrief += "Veuillez utiliser ce code pour votre paiement sur Prolific : <b>5DDAA2F2</b> ou cliquez sur le lien suivant pour valider votre participation :</p>";
+  debrief += "<a href='https://app.prolific.co/submissions/complete?cc=5DDAA2F2' target='_blank'>cliquez ici</a>";
+
+  // TIMELINE ----------------------------------------------------------------------------------------------------------
+  timeline.push(activeFullscreen);
+  timeline.push(previewCIinst);
+  timeline.push(previewCI);
+  traitsOrder.map(function(e) {return timeline.push( eval(e) )} );
+  timeline.push(age);
+  timeline.push(gender);
+  timeline.push(language);
+  timeline.push(Prolific_reported);
+  timeline.push(exitFullscreen);
+  
+  timeline = flatten(timeline); // do not remove this!
+
+  // INITIALISE EXP ----------------------------------------------------------------------------------------------------
+  jsPsych.init({
+    timeline: timeline,
+    preload_images: preloadimages,
+    max_load_time: 500*1000,
+    exclusions: {
+      min_width: 700,
+      min_height: 550,
+    },
+    on_finish: function(data) { 
+      $("#jspsych-content").html("<img src='https://i.gifer.com/4V0b.gif'>");
+
+      /* Initialize Firebase */
+      var config = {
+        apiKey: "AIzaSyBwDr8n-RNCbBOk1lKIxw7AFgslXGcnQzM",
+        databaseURL: "https://marineexpe.firebaseio.com/"
+      };
+
+      firebase.initializeApp(config);
+      var database = firebase.database();
+      id = jsPsych.randomization.randomID(15); // short ID
+
+      /* jsPsych: add data to every trial */
+      jsPsych.data.addProperties({
+        prolificID: prolificID,
+        id: id,
+        traitsOrder: traitsOrder,
+        totalTime: jsPsych.totalTime()
+      });
+
+      var subdata = data.filter({trial_type: 'html-slider-response'}).csv();
+      //jsPsych.data.displayData();
+
+      /* Send data to Firebase and redirect to Qualtrics */
+      database.ref("rel_irrel_Expe1_5_2/" + id + "/").update({subdata}).then(function() { 
+        console.log("data sent!");
+        $("#jspsych-content").html(debrief);
+        //window.location = qlink; // redirect to qualtrics
+      });
+    }
+  });
+</script>
+
+</html>
